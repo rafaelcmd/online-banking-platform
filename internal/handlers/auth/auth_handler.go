@@ -2,6 +2,7 @@ package auth
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -30,18 +31,27 @@ type CreateUserRequest struct {
 }
 
 func CreateUserHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println("Received request to create user")
+
 	var req CreateUserRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		log.Printf("Error decoding request body: %v\n", err)
+		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
 
+	log.Printf("Request payload: %+v\n", req)
+
 	err = CreateUser(req.Username, req.Password, req.ClientId, req.Email)
 	if err != nil {
+		log.Printf("Error creating user: %v\n", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	w.WriteHeader(http.StatusCreated)
+	w.Write([]byte("User created successfully"))
 }
 
 func CreateUser(username, password, clientId, email string) error {
@@ -59,7 +69,10 @@ func CreateUser(username, password, clientId, email string) error {
 
 	_, err := svc.SignUp(signUpInput)
 	if err != nil {
+		log.Printf("Error during SignUp API call: %v\n", err)
 		return err
 	}
+
+	log.Println("User created successfully with AWS Cognito")
 	return nil
 }
