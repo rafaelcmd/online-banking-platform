@@ -7,4 +7,5 @@ import (
 
 func RegisterAuthRoutes(r *mux.Router) {
 	r.HandleFunc("/api/v1/register", auth.CreateUserHandler).Methods("POST")
+	r.HandleFunc("/api/v1/auth", auth.SignInHandler).Methods("POST")
 }

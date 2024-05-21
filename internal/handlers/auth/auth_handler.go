@@ -30,6 +30,12 @@ type CreateUserRequest struct {
 	Email    string `json:"email"`
 }
 
+type AuthUser struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+	ClientId string `json:"clientId"`
+}
+
 func CreateUserHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("Received request to create user")
 
@@ -43,7 +49,7 @@ func CreateUserHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("Request payload: %+v\n", req)
 
-	err = CreateUser(req.Username, req.Password, req.ClientId, req.Email)
+	err = createUser(req.Username, req.Password, req.ClientId, req.Email)
 	if err != nil {
 		log.Printf("Error creating user: %v\n", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -54,7 +60,7 @@ func CreateUserHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("User created successfully"))
 }
 
-func CreateUser(username, password, clientId, email string) error {
+func createUser(username, password, clientId, email string) error {
 	signUpInput := &cognitoidentityprovider.SignUpInput{
 		ClientId: aws.String(clientId),
 		Username: aws.String(username),
@@ -74,5 +80,48 @@ func CreateUser(username, password, clientId, email string) error {
 	}
 
 	log.Println("User created successfully with AWS Cognito")
+	return nil
+}
+
+func SignInHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println("Received request to initiate auth user")
+
+	var req AuthUser
+
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		log.Printf("Error decoding request body: %v\n", err)
+		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		return
+	}
+
+	log.Printf("Request payload: %+v\n", req)
+
+	err = initiateAuthUser(req.Username, req.Password, req.ClientId)
+	if err != nil {
+		log.Printf("Error initiating auth user: %v\n", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("User authenticated successfully"))
+
+}
+
+func initiateAuthUser(username, password, clientId string) error {
+	initiateAuthInput := &cognitoidentityprovider.InitiateAuthInput{
+		AuthFlow: aws.String("USER_PASSWORD_AUTH"),
+		ClientId: aws.String(clientId),
+		AuthParameters: map[string]*string{
+			"USERNAME": aws.String(username),
+			"PASSWORD": aws.String(password),
+		},
+	}
+	_, err := svc.InitiateAuth(initiateAuthInput)
+	if err != nil {
+		log.Printf("Error during Initiate Auth User API call: %v\n", err)
+		return err
+	}
 	return nil
 }
