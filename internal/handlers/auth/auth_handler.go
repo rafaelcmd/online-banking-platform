@@ -8,6 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cognitoidentityprovider"
+	"github.com/rafaelcmd/online-banking-platform/pkg/auth"
 )
 
 var svc *cognitoidentityprovider.CognitoIdentityProvider
@@ -118,10 +119,18 @@ func initiateAuthUser(username, password, clientId string) error {
 			"PASSWORD": aws.String(password),
 		},
 	}
-	_, err := svc.InitiateAuth(initiateAuthInput)
+	res, err := svc.InitiateAuth(initiateAuthInput)
 	if err != nil {
 		log.Printf("Error during Initiate Auth User API call: %v\n", err)
 		return err
 	}
+
+	tokenManager := auth.NewTokenManager()
+	err = tokenManager.SaveToken(username, res.AuthenticationResult.AccessToken)
+	if err != nil {
+		log.Printf("Error saving token: %v\n", err)
+		return err
+	}
+
 	return nil
 }
