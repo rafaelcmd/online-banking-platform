@@ -12,6 +12,7 @@ import (
 
 func main() {
 	cfg := config.LoadConfig()
+
 	r := mux.NewRouter()
 
 	v1.RegisterAuthRoutes(r)

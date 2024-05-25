@@ -1,0 +1,37 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Resources:
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: "user-pool-test"
+      AliasAttributes:
+        - email
+        - preferred_username
+        - phone_number
+      AccountRecoverySetting:
+        RecoveryMechanisms:
+          - Name: verified_phone_number
+            Priority: 1
+          - Name: verified_email
+            Priority: 2
+      MfaConfiguration: "OFF"      
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: true
+          RequireUppercase: true
+
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: "user-pool-client-test"
+      ExplicitAuthFlows:
+        - USER_PASSWORD_AUTH
+      UserPoolId: !Ref UserPool
+
+Outputs:
+  UserPoolClientId:
+    Description: The ID of the User Pool Client
+    Value: !Ref UserPoolClient
