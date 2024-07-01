@@ -11,9 +11,10 @@ type TokenManager struct {
 }
 
 func NewTokenManager() *TokenManager {
-	sess := session.Must(session.NewSessionWithOptions(session.Options{
-		SharedConfigState: session.SharedConfigEnable,
+	sess := session.Must(session.NewSession(&aws.Config{
+		Region: aws.String("us-east-2"),
 	}))
+
 	return &TokenManager{ssmClient: ssm.New(sess)}
 }
 
@@ -24,9 +25,9 @@ func (tm *TokenManager) SaveToken(userId string, token *string) error {
 		Overwrite: aws.Bool(true),
 		Type:      aws.String("SecureString"),
 	})
-
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
