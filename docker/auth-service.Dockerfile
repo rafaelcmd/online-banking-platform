@@ -35,7 +35,7 @@ COPY cloudformation/create_user_pool.yaml /root/
 
 RUN chmod +x /root/create_user_pool_stack.sh /root/entrypoint.sh /root/create_user_pool.yaml
 
-EXPOSE 8080
+EXPOSE 80
 
 ENTRYPOINT ["/root/entrypoint.sh"]
 

@@ -48,7 +48,7 @@ func main() {
 	handler := c.Handler(r)
 
 	log.Printf("AuthService started")
-	log.Fatal(http.ListenAndServe(":8080", handler))
+	log.Fatal(http.ListenAndServe(":80", handler))
 }
 
 func getParameter(svc *ssm.SSM, name string) (string, error) {

@@ -1,0 +1,186 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Parameters:
+  ContainerImage:
+    Description: "The container image URI"
+    Type: String
+
+Resources:
+  OnlineBankPlatformVpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      Tags:
+        - Key: Name
+          Value: Online Bank Platform VPC
+
+  OnlineBankPlatformSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref OnlineBankPlatformVpc
+      CidrBlock: 10.0.1.0/24
+      AvailabilityZone: 
+        Fn::Select: 
+          - 0
+          - Fn::GetAZs: !Ref AWS::Region
+      Tags:
+        - Key: Name
+          Value: Online Bank Platform Subnet 1
+
+  OnlineBankPlatformInternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: Online Bank Platform Internet Gateway
+
+  OnlineBankPlatformVpcGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref OnlineBankPlatformVpc
+      InternetGatewayId: !Ref OnlineBankPlatformInternetGateway
+
+  OnlineBankPlatformRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref OnlineBankPlatformVpc
+      Tags:
+        - Key: Name
+          Value: Online Bank Platform Route Table
+
+  OnlineBankPlatformRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref OnlineBankPlatformRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref OnlineBankPlatformInternetGateway
+
+  OnlineBankPlatformSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref OnlineBankPlatformSubnet1
+      RouteTableId: !Ref OnlineBankPlatformRouteTable
+
+  OnlineBankPlatformCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: online-bank-platform-cluster
+
+  OnlineBankPlatformExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      Path: "/"
+      Policies:
+        - PolicyName: ecsTaskExecutionRolePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ecr:GetDownloadUrlForLayer
+                  - ecr:BatchGetImage
+                  - ecr:BatchCheckLayerAvailability
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                  - ecr:GetAuthorizationToken
+                  - ssm:GetParameter
+                  - ssm:GetParameters
+                  - ssm:GetParametersByPath
+                  - ssm:PutParameter
+                  - cognito-idp:CreateUserPool
+                  - cognito-idp:CreateUserPoolClient
+                  - cognito-idp:UpdateUserPool
+                  - cognito-idp:UpdateUserPoolClient
+                  - cognito-idp:DeleteUserPool
+                  - cognito-idp:DeleteUserPoolClient
+                  - cognito-idp:DescribeUserPool
+                  - cognito-idp:DescribeUserPoolClient
+                  - cloudformation:CreateStack
+                  - cloudformation:DescribeStacks
+                  - cloudformation:DeleteStack
+                  - cloudformation:UpdateStack
+                  - cloudformation:ListStackResources
+                Resource: "*"
+
+  OnlineBankPlatformTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      ContainerDefinitions:
+        - Name: online-bank-platform
+          Image: !Ref ContainerImage
+          Cpu: 256
+          Memory: 512
+          PortMappings:
+            - ContainerPort: 80
+              HostPort: 80
+              Protocol: tcp
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: /ecs/online-bank-platform
+              awslogs-region: us-east-2
+              awslogs-stream-prefix: ecs
+      Cpu: "256"
+      Memory: "512"
+      Family: online-bank-platform
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      ExecutionRoleArn: !GetAtt OnlineBankPlatformExecutionRole.Arn
+      TaskRoleArn: !GetAtt OnlineBankPlatformExecutionRole.Arn
+
+  OnlineBankPlatformService:
+    Type: AWS::ECS::Service
+    Properties:
+      ServiceName: online-bank-platform-service
+      Cluster: !Ref OnlineBankPlatformCluster
+      TaskDefinition: !Ref OnlineBankPlatformTaskDefinition
+      LaunchType: FARGATE
+      DesiredCount: 1
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          Subnets:
+            - !Ref OnlineBankPlatformSubnet1
+          SecurityGroups:
+            - !Ref OnlineBankPlatformSecurityGroup
+
+  OnlineBankPlatformSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Online Bank Platform Security Group
+      VpcId: !Ref OnlineBankPlatformVpc
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: Online Bank Platform Security Group
+
+Outputs:
+  VpcId:
+    Description: "The VPC Id"
+    Value: !Ref OnlineBankPlatformVpc
+  Subnet1:
+    Description: "The Subnet 1 Id"
+    Value: !Ref OnlineBankPlatformSubnet1
+  ClusterName:
+    Description: "The ECS Cluster Name"
+    Value: !Ref OnlineBankPlatformCluster
+  TaskDefinition:
+    Description: "The ECS Task Definition"
+    Value: !Ref OnlineBankPlatformTaskDefinition
+  ServiceName:
+    Description: "The ECS Service Name"
+    Value: !Ref OnlineBankPlatformService
+  SecurityGroup:
+    Description: "The Security Group Id"
+    Value: !Ref OnlineBankPlatformSecurityGroup

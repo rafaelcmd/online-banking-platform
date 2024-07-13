@@ -1,15 +1,5 @@
 #!/bin/bash
 
-# Debug: Verify AWS CLI is installed and accessible
-echo "AWS CLI Version:"
-/usr/local/bin/aws --version || { echo "AWS CLI not found"; exit 1; }
-
-# Check if AWS credentials are available
-if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
-    echo "AWS credentials not set. Exiting."
-    exit 1
-fi
-
 # Create the Cognito User Pool stack
 echo "Creating Cognito User Pool stack..."
 /usr/local/bin/aws cloudformation create-stack \
