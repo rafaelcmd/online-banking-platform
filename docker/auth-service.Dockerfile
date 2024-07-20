@@ -29,14 +29,6 @@ RUN /usr/local/bin/aws --version
 
 COPY --from=builder /auth-service .
 
-COPY scripts/create_user_pool_stack.sh /root/
-COPY scripts/entrypoint.sh /root/
-COPY cloudformation/create_user_pool.yaml /root/
-
-RUN chmod +x /root/create_user_pool_stack.sh /root/entrypoint.sh /root/create_user_pool.yaml
-
 EXPOSE 80
-
-ENTRYPOINT ["/root/entrypoint.sh"]
 
 CMD ["./auth-service"]
